@@ -10,7 +10,7 @@ class CustomClient extends Client {
     this.token = this.config.token;
     this.commands = new Map();
 
-		this.prefix = this.config.prefix
+		this.prefix = this.config.prefix || '.'
   }
 
   static prepareIntents(path) {
