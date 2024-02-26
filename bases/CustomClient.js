@@ -1,16 +1,20 @@
 const { Client } = require('discord.js');
 const IntentManager = require('./IntentManager');
 const { readdirSync } = require('fs');
+const Count = require('./Count');
 
 class CustomClient extends Client {
   constructor() {
     const intents = CustomClient.prepareIntents('./events');
     super(intents);
+    this.type = ['events', 'commands'];
+    this.eventsPath = './events';
+    this.commandPath = './commands';
     this.config = require('../config/client');
     this.token = this.config.token;
     this.commands = new Map();
-
-		this.prefix = this.config.prefix || '.'
+    this.cache = new Map();
+    this.prefix = this.config.prefix || '.';
   }
 
   static prepareIntents(path) {
@@ -25,45 +29,60 @@ class CustomClient extends Client {
     return this;
   }
 
-  loadEvents(path = './events') {
-    const moduleInfo = [];
-
-    readdirSync(path).forEach(name => {
-      try {
-        const event = require(`../${path}/${name}`);
-        super.on(event.name, (...args) => event.exec(this, ...args));
-        moduleInfo.push({ type: 'Event', name: event.name, desc: event.desc, status: 'Loaded' });
-      } catch (error) {
-        moduleInfo.push({ type: 'Event', name: name, desc: error.message, status: 'Failed' });
-      }
-    });
-    console.table(moduleInfo);
+  load() {
+    this.type.forEach(type => this.loadModules(type));
     return this;
   }
 
-  loadCommands(path = './commands') {
+  loadModules(type, path = `./${type}`) {
     const moduleInfo = [];
+    const moduleTypeHandlers = {
+      events: (module, name) => {
+        super.on(module.name, (...args) => module.exec(this, ...args));
+        return { name: module.name, desc: module.desc };
+      },
+      commands: (module, name) => {
+        const command = new module(this);
+        this.commands.set(command.help.name, command);
+        return { name: command.help.name, desc: command.help.desc };
+      }
+    };
+
     readdirSync(path).forEach(name => {
       try {
-        const command = new (require(`../${path}/${name}`))(this);
-        this.commands.set(command.help.name, command);
+        const module = require(`../${path}/${name}`);
+        if (!moduleTypeHandlers[type]) {
+          throw new Error(`Invalid module type: ${type}`);
+        }
+
+        const { name: moduleName, desc } = moduleTypeHandlers[type](module, name);
         moduleInfo.push({
-          type: 'Command',
-          name: command.help.name,
-          desc: command.help.desc,
+          type: type.charAt(0).toUpperCase() + type.slice(1),
+          name: moduleName,
+          desc: desc,
           status: 'Loaded'
         });
       } catch (error) {
-        moduleInfo.push({ type: 'Command', name: name, desc: error.message, status: 'Failed' });
+        moduleInfo.push({
+          type: type.charAt(0).toUpperCase() + type.slice(1),
+          name: name,
+          desc: error.message,
+          status: 'Failed'
+        });
       }
     });
+
     console.table(moduleInfo);
     return this;
   }
 
-  isCmd(message) {
-    if (message.author.bot || !message.content.startsWith(this.prefix)) return;
+  isBot(message) {
+    if (message.author.bot) return true;
+    return false;
+  }
 
+  isCmd(message) {
+    if (this.isBot(message) || !message.content.startsWith(this.prefix)) return this;
     const args = message.content.split(/\s+/g);
     const command = args.shift().slice(this.prefix.length);
     const cmd = this.commands.get(command);
@@ -80,6 +99,29 @@ class CustomClient extends Client {
     console.log(cmd.cooldown);
 
     return this;
+  }
+
+  counting(message) {
+    if (this.isBot(message)) return this;
+    const count = new Count(this, message).getData().check();
+
+  }
+  async loadCache() {
+    const guilds = await this.guilds.fetch();
+    guilds.forEach(g => {
+    this.set(g.id, { name: g.name, id: g.id, count: {current: 0, next: 1, prev:-1, lastUser: 'bot'}});
+    });
+    this.cache.forEach(c => console.log(c));
+    return this;
+  }
+  get(serverId) {
+    return this.cache.get(serverId);
+  }
+  set(serverId, value) {
+    this.cache.set(serverId, value);
+  }
+  invalidate(serverId) {
+    this.cache.delete(serverId);
   }
 }
 

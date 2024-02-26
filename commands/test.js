@@ -11,7 +11,7 @@ class Test extends Command {
   }
 
   async exec() {
-    console.log()
+    console.log();
   }
 }
 module.exports = Test;

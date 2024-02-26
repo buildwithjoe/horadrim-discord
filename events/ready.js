@@ -4,10 +4,13 @@ module.exports = {
   name: 'ready',
   intent: [GatewayIntentBits.Guilds],
   desc: 'Event triggered at client ready.',
-  exec: function () {
-    console.table({
-      message: `Client has started!`,
-      time: `${new Timestamp(Date.now()).format().formatted}`
-    });
+  exec: function (client) {
+    console.table([
+      {
+        message: `Client has started!`,
+        time: `${new Timestamp(Date.now()).format().formatted}`
+      }
+    ]);
+    client.loadCache();
   }
 };
