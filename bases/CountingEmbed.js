@@ -21,7 +21,9 @@ class CountingEmbed extends EmbedBuilder {
       .setTitle('Counting Correct!')
       .setDescription('For more info read below')
       .addFields(
-        { name: 'Last count user', value: String(user), inline: false },
+        { name: 'Input', value: String(this.message.content), inline: false },
+        { name: 'Formula', value: String(`${this.message.content} = ${current}`), inline: false },
+        { name: 'Last Count User', value: String(user), inline: false },
         { name: 'Current', value: String(current), inline: false },
         { name: 'Next', value: String(next), inline: false }
       );
@@ -29,9 +31,11 @@ class CountingEmbed extends EmbedBuilder {
 
   setupType2({ user, current, next }) {
     this.setColor(0xff0000)
-      .setTitle('Counting incorrect!')
+      .setTitle('Counting Incorrect!')
       .setDescription('For more info read below')
       .addFields(
+        { name: 'Input', value: String(this.message.content), inline: false },
+        { name: 'Formula', value: String(`${this.message.content} = ${current}`), inline: false },
         { name: 'Last count user', value: String(user), inline: false },
         { name: 'Current', value: String(current), inline: false },
         { name: 'Next', value: String(next), inline: false }

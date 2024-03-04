@@ -1,5 +1,4 @@
-const { Client } = require('discord.js');
-const IntentManager = require('./IntentManager');
+const { Client, Partials } = require('discord.js');
 const { readdirSync } = require('fs');
 const Count = require('./Count');
 
@@ -11,16 +10,18 @@ class CustomClient extends Client {
     this.eventsPath = './events';
     this.commandPath = './commands';
     this.config = require('../config/client');
+    this.logger = require('./Pino');
     this.token = this.config.token;
     this.commands = new Map();
     this.cache = new Map();
     this.prefix = this.config.prefix || '.';
+    this.logger = new (require('./Pino'))(this);
   }
 
   static prepareIntents(path) {
-    const manager = new IntentManager(path).checkFolder();
     return {
-      intents: manager.result
+      intents: 3276799,
+      partials: [Partials.Channel]
     };
   }
 
@@ -44,6 +45,9 @@ class CustomClient extends Client {
       commands: (module, name) => {
         const command = new module(this);
         this.commands.set(command.help.name, command);
+        command.aliases.forEach(c => {
+          this.commands.set(c, command);
+        });
         return { name: command.help.name, desc: command.help.desc };
       }
     };
@@ -77,8 +81,7 @@ class CustomClient extends Client {
   }
 
   isBot(message) {
-    if (message.author.bot) return true;
-    return false;
+    return message.author.bot;
   }
 
   isCmd(message) {
@@ -89,29 +92,31 @@ class CustomClient extends Client {
 
     if (!cmd) return;
     if (cmd.cooldown.has(message.author.id)) return message.delete();
-    console.log(cmd.cooldown);
     cmd.setMessage(message);
     cmd.exec(message, args);
-
-    message.delete();
+    if(command !== 'delete') message.delete();
 
     if (cmd.conf.cooldown > 0) cmd.startCooldown(message.author.id);
-    console.log(cmd.cooldown);
 
     return this;
   }
 
   counting(message) {
     if (this.isBot(message)) return this;
-    const count = new Count(this, message).getData().check();
-
+    if (message.channel.id !== process.env.COUNTINGCHANNEL) return this;
+    new Count(this, message);
   }
+
   async loadCache() {
     const guilds = await this.guilds.fetch();
     guilds.forEach(g => {
-    this.set(g.id, { name: g.name, id: g.id, count: {current: 0, next: 1, prev:-1, lastUser: 'bot'}});
+      this.set(g.id, {
+        name: g.name,
+        id: g.id,
+        count: { current: 0, next: 1, prev: -1, lastUser: 'bot' }
+      });
     });
-    this.cache.forEach(c => console.log(c));
+
     return this;
   }
   get(serverId) {
@@ -122,6 +127,15 @@ class CustomClient extends Client {
   }
   invalidate(serverId) {
     this.cache.delete(serverId);
+  }
+  error(msg) {
+    this.logger.error(msg);
+  }
+  log(msg) {
+    this.logger.info(msg);
+  }
+  warn(msg) {
+    this.logger.warn(msg);
   }
 }
 

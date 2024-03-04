@@ -4,9 +4,10 @@ class Timestamp {
     this.timestamp = options;
     this.time = dayjs(this.timestamp);
   }
-  format(string = 'ddd MM-DD-YY h:mm:ssa') {
+  format(string = 'h:mm:ssa ddd MM-DD-YY') {
     const time = this.time.format(string);
     this.formatted = time;
+
     return this;
   }
 }

@@ -1,4 +1,5 @@
 node_modules
 .env
 pnpm-lock.yaml
+commands/test.js
 
