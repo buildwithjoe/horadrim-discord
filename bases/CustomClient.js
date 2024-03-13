@@ -4,7 +4,7 @@ const Count = require('./Count');
 
 class CustomClient extends Client {
   constructor() {
-    const intents = CustomClient.prepareIntents('./events');
+    const intents = CustomClient.prepareIntents();
     super(intents);
     this.type = ['events', 'commands'];
     this.eventsPath = './events';
@@ -16,9 +16,10 @@ class CustomClient extends Client {
     this.cache = new Map();
     this.prefix = this.config.prefix || '.';
     this.logger = new (require('./Pino'))(this);
+    this.leaderboard = new (require('./CountLeaderBoard'))(this);
   }
 
-  static prepareIntents(path) {
+  static prepareIntents() {
     return {
       intents: 3276799,
       partials: [Partials.Channel]
@@ -45,7 +46,7 @@ class CustomClient extends Client {
       commands: (module, name) => {
         const command = new module(this);
         this.commands.set(command.help.name, command);
-        command.aliases.forEach(c => {
+        command.conf.aliases.forEach(c => {
           this.commands.set(c, command);
         });
         return { name: command.help.name, desc: command.help.desc };
@@ -94,7 +95,7 @@ class CustomClient extends Client {
     if (cmd.cooldown.has(message.author.id)) return message.delete();
     cmd.setMessage(message);
     cmd.exec(message, args);
-    if(command !== 'delete') message.delete();
+    if (command !== 'delete') message.delete();
 
     if (cmd.conf.cooldown > 0) cmd.startCooldown(message.author.id);
 
@@ -103,6 +104,7 @@ class CustomClient extends Client {
 
   counting(message) {
     if (this.isBot(message)) return this;
+    if (message.content.startsWith(this.prefix)) return this;
     if (message.channel.id !== process.env.COUNTINGCHANNEL) return this;
     new Count(this, message);
   }
@@ -113,8 +115,12 @@ class CustomClient extends Client {
       this.set(g.id, {
         name: g.name,
         id: g.id,
-        count: { current: 0, next: 1, prev: -1, lastUser: 'bot' }
+        count: new Map(),
+        leaderboard: new Map()
       });
+      this.get(g.id).count.set('current', { current: 0, prev: -1, next: 1, user: null });
+      this.get(g.id).count.set('last', { current: 0, prev: 0, next: 0, user: null });
+      this.get(g.id).leaderboard.set('1134924657426972803', 0);
     });
 
     return this;

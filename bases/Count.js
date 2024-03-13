@@ -1,62 +1,88 @@
 const math = require('mathjs');
 const CountingEmbed = require('./CountingEmbed');
+const LeaderBoard = require('./CountLeaderBoard');
 class Count {
   constructor(client, message) {
     this.client = client;
-    this.count = null;
     this.guildId = message.guild.id;
-    this.lastUser = client.get(this.guildId).count.lastUser;
     this.content = message.content;
+    this.leaderBoard = new LeaderBoard(this.client, this.guildId);
     this.message = message;
-    this.getData();
     this.check();
   }
-  static getData(update) {
-    if (update !== undefined && update !== null) {
-      let data = {
-        id: this.guildId,
-        name: this.message.guild.name,
-        count: {
-          current: update,
-          prev: update - 1,
-          next: update + 1,
-          lastUser: this.lastUser
-        }
-      };
-      this.client.set(this.guildId, data);
-    }
-    this.count = this.client.get(this.guildId).count.current;
-    this.next = this.count + 1;
-    this.prev = this.count - 1;
+  get cache() {
+    return this.client.cache;
+  }
+  get count() {
+    return this.client.get(this.guildId).count.get('current').current;
+  }
 
+  get prev() {
+    const currentCount = this.client.get(this.guildId).count.get('current').current;
+    return currentCount - 1;
+  }
+
+  get next() {
+    const currentCount = this.client.get(this.guildId).count.get('current').current;
+    return currentCount + 1;
+  }
+  z;
+  get user() {
+    return this.client.get(this.guildId).count.get('current').user;
+  }
+
+  getData(update) {
+    const data = {
+      current: update,
+      prev: update - 1,
+      next: update + 1,
+      user: this.message.author
+    };
+    this.client
+      .get(this.guildId)
+      .count.set('last', this.client.get(this.guildId).count.get('current'));
+    this.client.get(this.guildId).count.set('current', data);
+    this.leaderBoard.addScore(this.message.author.id, 1);
     return this;
   }
-  static async check() {
-    const result = math.evaluate(this.content);
-    this.result = result === this.prev || result === this.next;
-    if (this.result) {
-      this.getData(result);
-      const data = {
-        user: this.message.author,
-        current: this.count,
-        next: `${this.count - 1} or ${this.count + 1}`
-      };
-      this.lastUser = this.message.author;
-      const embed = new CountingEmbed(this.message, 'correct', data);
-      await embed.respond();
-      this.message.delete();
+  checkExtra(result) {
+    const extras = {
+      42: 'Ultimate Question of Life, the Universe, and Everything...',
+      69: 'Nice.',
+      420: 'Smoke one.',
+      666: 'The Number of the Beast.',
+      777: 'Lucky.',
+      1337: 'Leet.'
+    };
 
-      return this;
-    }
+    return extras[result] || undefined;
+  }
+
+  async handleResult(result) {
     const data = {
-      user: this.lastUser,
+      user: this.message.author,
       current: this.count,
       next: `${this.count - 1} or ${this.count + 1}`
     };
-    const embed = new CountingEmbed(this.message, 'incorrect', data);
-    await embed.respond();
-    this.message.delete();
+    
+    const isCorrect = result === this.prev || result === this.next;
+    if (isCorrect){
+      this.getData(result);
+    }
+    const embedType = isCorrect ? 'correct' : 'incorrect';
+    const extra = isCorrect ? this.checkExtra(result) : undefined;
 
+    data.extra = extra;
+
+    const embed = new CountingEmbed(this.message, embedType, data);
+    await embed.respond();
+    await this.message.delete();
+    return this;
+  }
+
+  async check() {
+    const result = math.evaluate(this.content);
+    await this.handleResult(result);
     return this;
   }
 }

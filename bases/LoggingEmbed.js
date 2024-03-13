@@ -4,10 +4,6 @@ const Timestamp = require('./Timestamp');
 class LoggingEmbed extends EmbedBuilder {
   constructor(level, msg, time) {
     super();
-    this.setupEmbed({ level, msg, time });
-  }
-
-  setupEmbed({ level, msg, time }) {
     switch (level) {
       case 30:
         this.setColor(0x0099ff).setTitle('Info Log');

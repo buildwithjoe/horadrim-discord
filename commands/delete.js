@@ -15,10 +15,11 @@ class Delete extends Command {
     const msgId = args[1];
     switch (true) {
       case isNaN(amount):
-        return this.client.logger.error("That doesn't seem to be a valid number.");
-      case msgId: message.channel.messages.fetch(msgId).then(msg => msg.delete());
-        case amount <= 1 || amount > 100:
+        return this.client.logger.error('You need to input a number.');
+      case amount <= 1 || amount > 100:
         return this.client.logger.error('You need to input a number between 1 and 99.');
+      case msgId:
+        return message.channel.messages.fetch(msgId).then(msg => msg.delete());
       default:
         try {
           const messages = await message.channel.messages.fetch({ limit: amount });
@@ -33,7 +34,6 @@ class Delete extends Command {
           this.client.logger.error(err);
         }
     }
-
   }
 }
 module.exports = Delete;

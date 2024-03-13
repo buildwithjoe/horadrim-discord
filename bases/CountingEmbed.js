@@ -16,7 +16,7 @@ class CountingEmbed extends EmbedBuilder {
     }
   }
 
-  setupType1({ user, current, next }) {
+  setupType1({ user, current, next, extra }) {
     this.setColor(0x0099ff)
       .setTitle('Counting Correct!')
       .setDescription('For more info read below')
@@ -25,8 +25,18 @@ class CountingEmbed extends EmbedBuilder {
         { name: 'Formula', value: String(`${this.message.content} = ${current}`), inline: false },
         { name: 'Last Count User', value: String(user), inline: false },
         { name: 'Current', value: String(current), inline: false },
-        { name: 'Next', value: String(next), inline: false }
+        { name: 'Next', value: String(next), inline: false },
+        {
+          name: 'Timestamp',
+          value: new Date().toLocaleString({
+            timeStyle: 'short',
+            dateStyle: 'short',
+            timeZoneName: 'short'
+          }),
+          inline: false
+        }
       );
+    if (extra !== undefined) this.addFields({ name: 'Extra', value: String(extra), inline: false });
   }
 
   setupType2({ user, current, next }) {
@@ -38,12 +48,21 @@ class CountingEmbed extends EmbedBuilder {
         { name: 'Formula', value: String(`${this.message.content} = ${current}`), inline: false },
         { name: 'Last count user', value: String(user), inline: false },
         { name: 'Current', value: String(current), inline: false },
-        { name: 'Next', value: String(next), inline: false }
+        { name: 'Next', value: String(next), inline: false },
+        {
+          name: 'Timestamp',
+          value: new Date().toLocaleString({
+            timeStyle: 'short',
+            dateStyle: 'short',
+            timeZoneName: 'short'
+          }),
+          inline: false
+        }
       );
   }
 
   async respond() {
-    await this.message.reply({ embeds: [this] });
+    await this.message.channel.send({ embeds: [this] });
   }
 }
 module.exports = CountingEmbed;
